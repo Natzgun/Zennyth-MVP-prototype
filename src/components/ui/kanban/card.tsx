@@ -10,6 +10,7 @@ interface KanbanCardProps {
   timeRequired?: number;
   priority?: string | number;
   isCompleted?: boolean;
+  isSelected?: boolean;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDragEnd: (e: React.DragEvent) => void;
 }
@@ -23,16 +24,19 @@ export function KanbanCard({
   timeRequired,
   priority,
   isCompleted,
+  isSelected,
   onDragStart,
   onDragEnd,
 }: KanbanCardProps) {
   return (
     <div
       draggable
+      data-task-id={id}
       onDragStart={(e) => onDragStart(e, id)}
       onDragEnd={onDragEnd}
       className={cn(
         "bg-surface p-4 rounded-lg border-l-4 border-y border-r border-y-border border-r-border shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing group",
+        isSelected && "ring-2 ring-primary ring-offset-2",
         borderClass
       )}
     >

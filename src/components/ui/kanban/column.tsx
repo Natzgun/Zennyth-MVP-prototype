@@ -13,6 +13,8 @@ interface KanbanColumnProps {
   titleClassName?: string;
   countClassName?: string;
   emptyState?: ReactNode;
+  status?: string;
+  isDropReady?: boolean;
 }
 
 export function KanbanColumn({
@@ -27,12 +29,16 @@ export function KanbanColumn({
   titleClassName,
   countClassName,
   emptyState,
+  status,
+  isDropReady,
 }: KanbanColumnProps) {
   return (
     <div
+      data-column-status={status}
       className={cn(
         "flex flex-col rounded-xl p-4 min-h-[400px] border transition-colors",
         bgClass ?? "bg-bg-subtle/30 border-border/50 hover:bg-bg-subtle/50",
+        isDropReady && "ring-2 ring-primary/40 bg-primary/5",
         className
       )}
       onDragOver={onDragOver}

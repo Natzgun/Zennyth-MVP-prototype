@@ -10,13 +10,14 @@ type WaitlistEntry = {
   email: string;
   at: string;
   groupInterest?: boolean;
+  notified?: boolean;
+  notifiedAt?: string;
 };
 
 async function getWaitlist(): Promise<WaitlistEntry[]> {
   try {
     const data = await fs.readFile(WAITLIST_FILE, "utf-8");
     const parsed = JSON.parse(data) as WaitlistEntry[];
-    // Backfill: any legacy entry without groupInterest counts as not interested.
     return parsed.map((entry) => ({
       ...entry,
       groupInterest: entry.groupInterest ?? false,
@@ -67,6 +68,7 @@ export async function GET() {
   const waitlist = await getWaitlist();
   const count = waitlist.length;
   const groupInterestCount = waitlist.filter((e) => e.groupInterest).length;
+  const notifiedCount = waitlist.filter((e) => e.notified).length;
   const ratio = count === 0 ? 0 : groupInterestCount / count;
-  return NextResponse.json({ count, groupInterestCount, ratio });
+  return NextResponse.json({ count, groupInterestCount, notifiedCount, ratio });
 }

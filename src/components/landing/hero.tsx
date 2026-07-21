@@ -72,9 +72,9 @@ export function LandingHero() {
           </Badge>
 
           <h1 className="text-4xl md:text-5xl font-bold text-text-1 tracking-tight leading-tight">
-            Estudia menos horas.
+            El mismo método que
             <br />
-            <span className="text-primary">Aprende más.</span>
+            <span className="text-primary">los mejores del mundo.</span>
           </h1>
 
           <p className="text-lg text-text-2 max-w-lg mx-auto leading-relaxed">
@@ -174,10 +174,7 @@ export function LandingHero() {
               <Users className="w-3.5 h-3.5" />
               <span>Para estudiantes y freelancers</span>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-text-3">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Powered by Gemini IA</span>
-            </div>
+
           </div>
         </div>
       </div>

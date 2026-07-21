@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { GroupTask, GroupTaskStatus } from "@/types/workspace";
 import { todayStr } from "@/lib/utils";
+import { useTouchDnD } from "@/hooks/use-touch-dnd";
 
 interface WorkspaceBoardProps {
   workspaceId: string;
@@ -63,7 +64,44 @@ export function WorkspaceBoard({ workspaceId }: WorkspaceBoardProps) {
     DONE: workspace.tasks.filter((t) => t.status === "DONE"),
   };
 
-  // ── Drag handlers ───────────────────────────────────────────
+  // ── Tap-to-tap (móvil / tablet) ───────────────────────────────
+  const {
+    selectedTaskId,
+    selectTask,
+    dropOnStatus,
+    clearSelection,
+  } = useTouchDnD((taskId, status) =>
+    updateTaskStatus(workspaceId, taskId, status as GroupTaskStatus)
+  );
+
+  const handleBoardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("button, a, input, select, textarea, [role='menuitem']")) return;
+
+    const cardEl = target.closest("[data-task-id]");
+    const columnEl = target.closest("[data-column-status]");
+
+    if (cardEl) {
+      const clickedTaskId = cardEl.getAttribute("data-task-id");
+      if (!clickedTaskId) return;
+
+      if (clickedTaskId === selectedTaskId) {
+        clearSelection();
+      } else if (selectedTaskId) {
+        const status = columnEl?.getAttribute("data-column-status");
+        if (status) dropOnStatus(status);
+      } else {
+        selectTask(clickedTaskId);
+      }
+    } else if (columnEl && selectedTaskId) {
+      const status = columnEl.getAttribute("data-column-status");
+      if (status) dropOnStatus(status);
+    } else {
+      if (selectedTaskId) clearSelection();
+    }
+  };
+
+  // ── Drag handlers (desktop) ─────────────────────────────────
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     e.dataTransfer.setData("taskId", taskId);
     e.dataTransfer.setData("workspaceId", workspaceId);
@@ -201,11 +239,13 @@ export function WorkspaceBoard({ workspaceId }: WorkspaceBoardProps) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4" onClick={handleBoardClick}>
         <KanbanColumn
           title="Por hacer"
           icon={ClipboardList}
           count={columns.TODO.length}
+          status="TODO"
+          isDropReady={!!selectedTaskId}
           onDragOver={handleDragOver}
           onDrop={(e) => handleDrop(e, "TODO")}
           emptyState={emptyStates.TODO}
@@ -218,8 +258,10 @@ export function WorkspaceBoard({ workspaceId }: WorkspaceBoardProps) {
               members={workspace.members}
               currentMemberId={currentMemberId}
               statusTone={STATUS_TONE[task.status]}
+              isSelected={selectedTaskId === task.id}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
+  
             />
           ))}
         </KanbanColumn>
@@ -228,6 +270,8 @@ export function WorkspaceBoard({ workspaceId }: WorkspaceBoardProps) {
           title="En progreso"
           icon={Timer}
           count={columns.IN_PROGRESS.length}
+          status="IN_PROGRESS"
+          isDropReady={!!selectedTaskId}
           onDragOver={handleDragOver}
           onDrop={(e) => handleDrop(e, "IN_PROGRESS")}
           bgClass="bg-primary/5 border-primary/10 hover:bg-primary/10"
@@ -243,8 +287,10 @@ export function WorkspaceBoard({ workspaceId }: WorkspaceBoardProps) {
               members={workspace.members}
               currentMemberId={currentMemberId}
               statusTone={STATUS_TONE[task.status]}
+              isSelected={selectedTaskId === task.id}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
+  
             />
           ))}
         </KanbanColumn>
@@ -253,6 +299,8 @@ export function WorkspaceBoard({ workspaceId }: WorkspaceBoardProps) {
           title="Terminadas"
           icon={CheckCircle2}
           count={columns.DONE.length}
+          status="DONE"
+          isDropReady={!!selectedTaskId}
           onDragOver={handleDragOver}
           onDrop={(e) => handleDrop(e, "DONE")}
           bgClass="bg-accent/5 border-accent/10 hover:bg-accent/10"
@@ -268,8 +316,10 @@ export function WorkspaceBoard({ workspaceId }: WorkspaceBoardProps) {
               members={workspace.members}
               currentMemberId={currentMemberId}
               statusTone={STATUS_TONE[task.status]}
+              isSelected={selectedTaskId === task.id}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
+  
             />
           ))}
         </KanbanColumn>

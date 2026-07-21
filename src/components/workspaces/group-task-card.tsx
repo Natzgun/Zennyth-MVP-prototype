@@ -29,6 +29,7 @@ interface GroupTaskCardProps {
   currentMemberId?: string;
   /** Visual tone for the left border (matches the parent column's status). */
   statusTone: "todo" | "in-progress" | "done";
+  isSelected?: boolean;
   onDragStart: (e: React.DragEvent, taskId: string) => void;
   onDragEnd: (e: React.DragEvent) => void;
 }
@@ -63,6 +64,7 @@ export function GroupTaskCard({
   members,
   currentMemberId,
   statusTone,
+  isSelected,
   onDragStart,
   onDragEnd,
 }: GroupTaskCardProps) {
@@ -86,11 +88,13 @@ export function GroupTaskCard({
     <>
       <div
         draggable
+        data-task-id={task.id}
         onDragStart={(e) => onDragStart(e, task.id)}
         onDragEnd={onDragEnd}
         className={cn(
           "bg-surface p-4 rounded-lg border-l-4 border-y border-r border-y-border border-r-border shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing group",
           STATUS_BORDER[statusTone],
+          isSelected && "ring-2 ring-primary ring-offset-2",
           allDone && "ring-1 ring-accent/30"
         )}
       >

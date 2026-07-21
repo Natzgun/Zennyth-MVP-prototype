@@ -6,6 +6,7 @@ import { TaskStatus } from "@/types";
 import { CircleDashed, Timer, CheckCircle2, Clock } from "lucide-react";
 import { KanbanColumn } from "@/components/ui/kanban/column";
 import { KanbanCard } from "@/components/ui/kanban/card";
+import { useTouchDnD } from "@/hooks/use-touch-dnd";
 
 export function KanbanBoard() {
   const { tasks, updateTaskStatus } = useZenStore();
@@ -41,7 +42,44 @@ export function KanbanBoard() {
     DONE: tasks.filter((t) => t.status === TaskStatus.COMPLETED),
   };
 
-  // --- LÓGICA DE ARRASTRAR Y SOLTAR ---
+  // --- TAP-TO-TAP (móvil / tablet) ---
+  const {
+    selectedTaskId,
+    selectTask,
+    dropOnStatus,
+    clearSelection,
+  } = useTouchDnD((taskId, status) =>
+    updateTaskStatus(taskId, status as TaskStatus)
+  );
+
+  const handleBoardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("button, a, input, select, textarea, [role='menuitem']")) return;
+
+    const cardEl = target.closest("[data-task-id]");
+    const columnEl = target.closest("[data-column-status]");
+
+    if (cardEl) {
+      const clickedTaskId = cardEl.getAttribute("data-task-id");
+      if (!clickedTaskId) return;
+
+      if (clickedTaskId === selectedTaskId) {
+        clearSelection();
+      } else if (selectedTaskId) {
+        const status = columnEl?.getAttribute("data-column-status");
+        if (status) dropOnStatus(status);
+      } else {
+        selectTask(clickedTaskId);
+      }
+    } else if (columnEl && selectedTaskId) {
+      const status = columnEl.getAttribute("data-column-status");
+      if (status) dropOnStatus(status);
+    } else {
+      if (selectedTaskId) clearSelection();
+    }
+  };
+
+  // --- LÓGICA DE ARRASTRAR Y SOLTAR (desktop) ---
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     e.dataTransfer.setData("taskId", taskId);
     setTimeout(() => {
@@ -74,13 +112,15 @@ export function KanbanBoard() {
   );
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6" onClick={handleBoardClick}>
 
       {/* COLUMNA 1: Por Empezar (Se llena progresivamente) */}
       <KanbanColumn
         title="Desbloqueadas"
         icon={CircleDashed}
         count={columns.TODO.length}
+        status={TaskStatus.PENDING}
+        isDropReady={!!selectedTaskId}
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, TaskStatus.PENDING)}
         emptyState={todoEmptyState}
@@ -99,8 +139,10 @@ export function KanbanBoard() {
             timeRequired={task.metrics?.timeRequired}
             priority={task.calculatedPriority}
             borderClass="border-l-text-3"
+            isSelected={selectedTaskId === task.id}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+
           />
         ))}
       </KanbanColumn>
@@ -110,6 +152,8 @@ export function KanbanBoard() {
         title="En Foco"
         icon={Timer}
         count={columns.IN_PROGRESS.length}
+        status={TaskStatus.IN_PROGRESS}
+        isDropReady={!!selectedTaskId}
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, TaskStatus.IN_PROGRESS)}
         bgClass="bg-primary/5 border-primary/10 hover:bg-primary/10"
@@ -130,8 +174,10 @@ export function KanbanBoard() {
             timeRequired={task.metrics?.timeRequired}
             priority={task.calculatedPriority}
             borderClass="border-l-primary"
+            isSelected={selectedTaskId === task.id}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+
           />
         ))}
       </KanbanColumn>
@@ -141,6 +187,8 @@ export function KanbanBoard() {
         title="Terminadas"
         icon={CheckCircle2}
         count={columns.DONE.length}
+        status={TaskStatus.COMPLETED}
+        isDropReady={!!selectedTaskId}
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, TaskStatus.COMPLETED)}
         bgClass="bg-accent/5 border-accent/10 hover:bg-accent/10"
@@ -162,8 +210,10 @@ export function KanbanBoard() {
             priority={task.calculatedPriority}
             borderClass="border-l-accent opacity-60 hover:opacity-100"
             isCompleted
+            isSelected={selectedTaskId === task.id}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+
           />
         ))}
       </KanbanColumn>
