@@ -61,6 +61,7 @@ interface ZenStore {
   
   setUser: (user: Partial<User>) => void;
   completeOnboarding: (name: string, university: string) => void;
+  loadDemoTasks: () => void;
   updateTaskStatus: (id: string, status: TaskStatus) => void;
   addTask: (
     title: string,
@@ -137,46 +138,128 @@ const EMPTY_METRICS: UsageMetrics = {
   weeklyActiveCount: 0,
 };
 
-// Sample tasks for new users so dashboard isn't empty
+function inProgressTaskEvents(tasks: Task[]): CalendarEvent[] {
+  return tasks.flatMap((task) => {
+    if (
+      task.status !== TaskStatus.IN_PROGRESS ||
+      !task.scheduledStart
+    ) {
+      return [];
+    }
+
+    return [{
+      id: `in-progress-${task.id}`,
+      title: task.title,
+      start: task.scheduledStart,
+      end: task.scheduledEnd ?? new Date(
+        new Date(task.scheduledStart).getTime() + task.metrics.timeRequired * 60 * 60 * 1000
+      ).toISOString(),
+      isFixed: true,
+      type: "STUDY_BLOCK" as const,
+    }];
+  });
+}
+
+function applySchedule(tasks: Task[], scheduledTasks: Task[]): Task[] {
+  const scheduledById = new Map(scheduledTasks.map((task) => [task.id, task]));
+
+  return tasks.map((task) => {
+    if (task.status !== TaskStatus.PENDING && task.status !== TaskStatus.OVERDUE) {
+      return task;
+    }
+
+    return scheduledById.get(task.id) ?? {
+      ...task,
+      scheduledStart: undefined,
+      scheduledEnd: undefined,
+    };
+  });
+}
+
+// Sample history makes the dashboard useful from the first visit.
 function createSampleTasks(): Task[] {
   const now = new Date();
-  const in2Days = new Date(now);
-  in2Days.setDate(in2Days.getDate() + 2);
-  const in5Days = new Date(now);
-  in5Days.setDate(in5Days.getDate() + 5);
-  const in7Days = new Date(now);
-  in7Days.setDate(in7Days.getDate() + 7);
+  const dateAt = (daysFromToday: number, hour = 10) => {
+    const date = new Date(now);
+    date.setDate(date.getDate() + daysFromToday);
+    date.setHours(hour, 0, 0, 0);
+    return date.toISOString();
+  };
+  const completedTask = (
+    id: string,
+    title: string,
+    subject: string,
+    daysAgo: number,
+    timeRequired: number
+  ): Task => ({
+    id,
+    title,
+    subject,
+    deadline: dateAt(daysAgo - 1),
+    metrics: { gradeImpact: 7, urgency: 6, risk: 4, timeRequired },
+    calculatedPriority: calculateWSJFPriority(7, 6, 4, timeRequired),
+    status: TaskStatus.COMPLETED,
+    createdAt: dateAt(daysAgo - 4),
+    completedAt: dateAt(daysAgo, 18),
+  });
+
+  const completedActivity = [
+    { title: "Resolver ejercicios de Cálculo", subject: "Cálculo", daysAgo: -79, count: 1 },
+    { title: "Preparar fichas de Biología", subject: "Biología", daysAgo: -73, count: 2 },
+    { title: "Repasar mecánica clásica", subject: "Física", daysAgo: -65, count: 3 },
+    { title: "Corregir avance del ensayo", subject: "Historia", daysAgo: -56, count: 1 },
+    { title: "Práctica de programación", subject: "Programación", daysAgo: -49, count: 2 },
+    { title: "Completar reporte de laboratorio", subject: "Física", daysAgo: -43, count: 4 },
+    { title: "Revisar lecturas de metodología", subject: "Metodología", daysAgo: -35, count: 1 },
+    { title: "Resolver problemas de Cálculo", subject: "Cálculo", daysAgo: -27, count: 3 },
+    { title: "Preparar guía de estudio", subject: "Biología", daysAgo: -19, count: 2 },
+    { title: "Avanzar proyecto de programación", subject: "Programación", daysAgo: -11, count: 4 },
+    { title: "Sintetizar apuntes de clase", subject: "Historia", daysAgo: -4, count: 1 },
+    { title: "Revisar lecturas de la semana", subject: "Metodología", daysAgo: -1, count: 2 },
+  ];
+  const completedTasks = completedActivity.flatMap((activity, activityIndex) =>
+    Array.from({ length: activity.count }, (_, taskIndex) =>
+      completedTask(
+        `demo-completed-${activityIndex}-${taskIndex}`,
+        activity.count > 1 ? `${activity.title} (${taskIndex + 1}/${activity.count})` : activity.title,
+        activity.subject,
+        activity.daysAgo,
+        1 + (taskIndex % 2) * 0.5
+      )
+    )
+  );
 
   return [
+    ...completedTasks,
     {
-      id: generateId(),
+      id: "demo-pending-1",
       title: "Estudiar para parcial de Cálculo",
       subject: "Cálculo",
-      deadline: in2Days.toISOString(),
+      deadline: dateAt(2),
       metrics: { gradeImpact: 9, urgency: 9, risk: 7, timeRequired: 3 },
       calculatedPriority: calculateWSJFPriority(9, 9, 7, 3),
       status: TaskStatus.PENDING,
-      createdAt: now.toISOString(),
+      createdAt: dateAt(-1),
     },
     {
-      id: generateId(),
+      id: "demo-pending-2",
       title: "Ensayo de Historia del Arte",
       subject: "Historia",
-      deadline: in5Days.toISOString(),
+      deadline: dateAt(5),
       metrics: { gradeImpact: 7, urgency: 5, risk: 4, timeRequired: 2 },
       calculatedPriority: calculateWSJFPriority(7, 5, 4, 2),
       status: TaskStatus.PENDING,
-      createdAt: now.toISOString(),
+      createdAt: dateAt(-1),
     },
     {
-      id: generateId(),
+      id: "demo-pending-3",
       title: "Reporte de laboratorio de Física",
       subject: "Física",
-      deadline: in7Days.toISOString(),
+      deadline: dateAt(7),
       metrics: { gradeImpact: 6, urgency: 3, risk: 3, timeRequired: 1.5 },
       calculatedPriority: calculateWSJFPriority(6, 3, 3, 1.5),
       status: TaskStatus.PENDING,
-      createdAt: now.toISOString(),
+      createdAt: dateAt(-1),
     },
   ];
 }
@@ -237,6 +320,7 @@ export const useZenStore = create<ZenStore>()(
 
       completeOnboarding: (name, university) => {
         const sampleTasks = createSampleTasks();
+        const completedSampleTasks = sampleTasks.filter((task) => task.status === TaskStatus.COMPLETED);
         set({
           user: { name, university },
           isOnboarded: true,
@@ -245,11 +329,28 @@ export const useZenStore = create<ZenStore>()(
             ...EMPTY_METRICS,
             onboardedAt: new Date().toISOString(),
             tasksCreated: sampleTasks.length,
+            tasksCompleted: completedSampleTasks.length,
             lastActiveDate: todayStr(),
             daysActive: 1,
           },
         });
       },
+
+      loadDemoTasks: () =>
+        set((state) => {
+          const sampleTasks = createSampleTasks();
+          const completedSampleTasks = sampleTasks.filter((task) => task.status === TaskStatus.COMPLETED);
+          const existingDemoTasks = state.tasks.filter((task) => task.id.startsWith("demo-"));
+          const existingDemoCompletions = existingDemoTasks.filter((task) => task.status === TaskStatus.COMPLETED);
+          return {
+            tasks: [...state.tasks.filter((task) => !task.id.startsWith("demo-")), ...sampleTasks],
+            metrics: {
+              ...state.metrics,
+              tasksCreated: Math.max(0, state.metrics.tasksCreated - existingDemoTasks.length) + sampleTasks.length,
+              tasksCompleted: Math.max(0, state.metrics.tasksCompleted - existingDemoCompletions.length) + completedSampleTasks.length,
+            },
+          };
+        }),
 
       addTask: (title, deadline, timeRequired, subject, customMetrics) => {
         const state = get();
@@ -325,15 +426,11 @@ export const useZenStore = create<ZenStore>()(
       autoSchedule: () => {
         const state = get();
         const fixedEvents = state.events.filter((e) => e.isFixed);
-        const { scheduledTasks, studyBlocks } = generateSchedule(state.tasks, fixedEvents);
-
-        const updatedTasks = state.tasks.map((task) => {
-          const scheduled = scheduledTasks.find((st) => st.id === task.id);
-          return scheduled || task;
-        });
+        const occupiedEvents = [...fixedEvents, ...inProgressTaskEvents(state.tasks)];
+        const { scheduledTasks, studyBlocks } = generateSchedule(state.tasks, occupiedEvents);
 
         set({
-          tasks: updatedTasks,
+          tasks: applySchedule(state.tasks, scheduledTasks),
           events: [...fixedEvents, ...studyBlocks],
           metrics: {
             ...state.metrics,
@@ -435,13 +532,8 @@ export const useZenStore = create<ZenStore>()(
         }
 
         const fixedEvents = state.events.filter((e) => e.isFixed);
-        const { scheduledTasks, studyBlocks } = generateSchedule(pendingTasks, fixedEvents);
-
-        // Update task schedules
-        const updatedTasks = state.tasks.map((task) => {
-          const scheduled = scheduledTasks.find((st) => st.id === task.id);
-          return scheduled || task;
-        });
+        const occupiedEvents = [...fixedEvents, ...inProgressTaskEvents(state.tasks)];
+        const { scheduledTasks, studyBlocks } = generateSchedule(pendingTasks, occupiedEvents);
 
         const tasksAffected = scheduledTasks.length;
         const nextTask = scheduledTasks[0]?.title;
@@ -460,7 +552,7 @@ export const useZenStore = create<ZenStore>()(
         };
 
         set({
-          tasks: updatedTasks,
+          tasks: applySchedule(state.tasks, scheduledTasks),
           events: [...fixedEvents, ...studyBlocks],
           rescueHistory: [...state.rescueHistory, rescueEntry],
           metrics: {
@@ -478,6 +570,13 @@ export const useZenStore = create<ZenStore>()(
           metrics: { ...state.metrics, [event]: (state.metrics[event] as number) + 1 },
         })),
     }),
-    { name: "zennyth-store" }
+    {
+      name: "zennyth-store",
+      onRehydrateStorage: () => (state) => {
+        if (state?.isOnboarded && (!state.tasks.some((task) => task.status === TaskStatus.COMPLETED) || state.tasks.some((task) => task.id.startsWith("demo-")))) {
+          state.loadDemoTasks();
+        }
+      },
+    }
   )
 );

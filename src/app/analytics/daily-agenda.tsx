@@ -56,9 +56,9 @@ export function DailyAgenda({ tasks, groupTasks }: DailyAgendaProps) {
   }, []);
 
   const getIntensityClasses = (priority: number) => {
-    if (priority >= 8) return "bg-primary text-white border-primary-hover shadow-md z-10";
-    if (priority >= 5) return "bg-primary/50 text-text-1 border-primary/60";
-    return "bg-primary/20 text-text-2 border-primary/30";
+    if (priority >= 8) return "bg-primary-subtle text-primary border-primary/35 shadow-sm z-10";
+    if (priority >= 5) return "bg-primary-subtle/70 text-text-1 border-primary/25";
+    return "bg-accent-subtle/70 text-text-2 border-accent/25";
   };
 
   // Cálculos para la posición de la línea roja
@@ -100,7 +100,7 @@ export function DailyAgenda({ tasks, groupTasks }: DailyAgendaProps) {
       {/* CONTENEDOR CON SCROLL (overflow-y-auto) */}
       <div
         ref={scrollRef}
-        className="relative w-full overflow-y-auto custom-scrollbar bg-surface rounded-lg border border-border flex-1 scroll-smooth"
+        className="scrollbar-zennyth relative w-full overflow-y-auto bg-surface rounded-lg border border-border flex-1 scroll-smooth"
       >
         {/* Contenedor interno que define la altura total (24 horas * 60px) */}
         <div className="relative" style={{ height: `${24 * 60}px` }}>
@@ -122,8 +122,8 @@ export function DailyAgenda({ tasks, groupTasks }: DailyAgendaProps) {
             className="absolute left-0 right-0 z-20 flex items-center pointer-events-none"
             style={{ top: `${nowOffset}px`, transform: "translateY(-50%)" }}
           >
-            <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] ml-[50px]"></div>
-            <div className="flex-1 h-[2px] bg-red-500/80 shadow-[0_0_5px_rgba(239,68,68,0.5)]"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-primary/70 shadow-sm shadow-primary/20 ml-[50px]"></div>
+            <div className="flex-1 h-[2px] bg-primary/50"></div>
           </div>
 
           {/* Bloques de tareas */}
@@ -138,7 +138,7 @@ export function DailyAgenda({ tasks, groupTasks }: DailyAgendaProps) {
                   className={`absolute left-1 right-2 rounded-md border-l-4 p-2 overflow-hidden transition-all hover:brightness-110 cursor-pointer ${getIntensityClasses(task.priority)}`}
                   style={{ top: `${topOffset}px`, height: `${task.duration - 2}px` }}
                 >
-                  <h3 className="font-semibold text-[11px] leading-tight truncate">{task.title}</h3>
+                  <h3 className="break-words text-[11px] font-semibold leading-tight" title={task.title}>{task.title}</h3>
                 </div>
               );
             })}

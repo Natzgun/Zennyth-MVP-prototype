@@ -20,26 +20,25 @@ export function KanbanBoard() {
     return () => clearInterval(interval);
   }, []);
 
-  // 3. Agrupamos y filtramos las tareas
+  const isToday = (timestamp?: string) => {
+    if (!timestamp) return false;
+    const date = new Date(timestamp);
+    const today = new Date();
+    return !Number.isNaN(date.getTime()) && date.toDateString() === today.toDateString();
+  };
+
+  // El tablero del inicio muestra solo el trabajo activo para hoy.
+  const todayTasks = tasks.filter((task) =>
+    task.status === TaskStatus.COMPLETED
+      ? isToday(task.completedAt)
+      : isToday(task.scheduledStart) || isToday(task.deadline)
+  );
+
+  // 3. Agrupamos las tareas de hoy
   const columns = {
-    TODO: tasks.filter((t) => {
-      const isPending = t.status === TaskStatus.PENDING || t.status === TaskStatus.OVERDUE || !t.status;
-      if (!isPending) return false;
-
-      // Si no tiene hora programada, la mostramos para que no quede invisible
-      if (!t.scheduledStart) return true;
-
-      // EL FIX: Comparamos puramente la hora del día, ignorando la fecha exacta
-      const startTime = new Date(t.scheduledStart);
-      const taskTimeInMinutes = (startTime.getHours() * 60) + startTime.getMinutes();
-      const currentTimeInMinutes = (currentTime.getHours() * 60) + currentTime.getMinutes();
-
-      // Solo mostramos la tarea si los minutos transcurridos del día actual
-      // son mayores o iguales a la hora en la que debía empezar.
-      return taskTimeInMinutes <= currentTimeInMinutes;
-    }),
-    IN_PROGRESS: tasks.filter((t) => t.status === TaskStatus.IN_PROGRESS),
-    DONE: tasks.filter((t) => t.status === TaskStatus.COMPLETED),
+    TODO: todayTasks.filter((t) => t.status === TaskStatus.PENDING || t.status === TaskStatus.OVERDUE),
+    IN_PROGRESS: todayTasks.filter((t) => t.status === TaskStatus.IN_PROGRESS),
+    DONE: todayTasks.filter((t) => t.status === TaskStatus.COMPLETED),
   };
 
   // --- TAP-TO-TAP (móvil / tablet) ---
@@ -107,7 +106,7 @@ export function KanbanBoard() {
   const todoEmptyState = (
     <div className="flex flex-col items-center justify-center flex-1 text-center opacity-60">
       <Clock className="w-8 h-8 text-text-3 mb-2" />
-      <p className="text-xs text-text-3 font-medium">No hay tareas pendientes para esta hora.</p>
+      <p className="text-xs text-text-3 font-medium">No hay tareas pendientes para hoy.</p>
     </div>
   );
 
@@ -124,6 +123,7 @@ export function KanbanBoard() {
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, TaskStatus.PENDING)}
         emptyState={todoEmptyState}
+        scrollable
       >
         {columns.TODO.map((task) => (
           <KanbanCard
@@ -159,6 +159,7 @@ export function KanbanBoard() {
         bgClass="bg-primary/5 border-primary/10 hover:bg-primary/10"
         titleClassName="text-primary"
         countClassName="bg-primary/20 text-primary"
+        scrollable
       >
         {columns.IN_PROGRESS.map((task) => (
           <KanbanCard
@@ -194,6 +195,7 @@ export function KanbanBoard() {
         bgClass="bg-accent/5 border-accent/10 hover:bg-accent/10"
         titleClassName="text-accent"
         countClassName="bg-accent/20 text-accent"
+        scrollable
       >
         {columns.DONE.map((task) => (
           <KanbanCard

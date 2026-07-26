@@ -10,8 +10,9 @@ import { TimeAccuracyBadge } from "@/components/manana/time-accuracy-badge";
 import { DailyBanner } from "@/components/manana/daily-banner";
 import { ShareStats } from "@/components/ui/share-stats";
 import { NpsPrompt } from "@/components/ui/nps-prompt";
+import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap";
+import { TaskStatus } from "@/types";
 
-import { VelocityChart } from "../app/analytics/velocity-chart";
 import { KanbanBoard } from "../app/analytics/kanban-board";
 import { DailyAgenda, AgendaTask, GroupAgendaTask } from "../app/analytics/daily-agenda";
 
@@ -61,7 +62,7 @@ function buildGroupAgendaTasks(
 }
 
 export default function DashboardPage() {
-  const { tasks, autoSchedule } = useZenStore();
+  const { tasks, focusSessions, autoSchedule } = useZenStore();
   // NOTE: this is a deliberate, documented exception to strict store
   // isolation. The Mañana dashboard is the aggregation layer where group
   // work meets the individual timeline. If the user has zero workspaces,
@@ -82,8 +83,12 @@ export default function DashboardPage() {
   const dateStr = today.toLocaleDateString("es", { day: "numeric", month: "long" });
   const dayNameCapitalized = today.toLocaleDateString("es", { weekday: "long" }).charAt(0).toUpperCase() + today.toLocaleDateString("es", { weekday: "long" }).slice(1);
 
-  // Preparamos las tareas individuales para la Agenda visual
-  const individualAgendaTasks: AgendaTask[] = tasks.filter(t => t.scheduledStart).map(t => {
+  // Preparamos solo las tareas programadas para la agenda de hoy.
+  const individualAgendaTasks: AgendaTask[] = tasks.filter((t) => {
+    if (t.status === TaskStatus.COMPLETED) return false;
+    if (!t.scheduledStart) return false;
+    return new Date(t.scheduledStart).toDateString() === today.toDateString();
+  }).map(t => {
     const d = new Date(t.scheduledStart!);
     return {
       id: t.id,
@@ -104,7 +109,7 @@ export default function DashboardPage() {
 
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-text-1">Mañana, {dayNameCapitalized}</h1>
+          <h1 className="text-2xl font-bold text-text-1">Hoy, {dayNameCapitalized}</h1>
           <p className="text-sm text-text-2 mt-0.5 capitalize">{dateStr}</p>
         </div>
         <div className="flex items-center gap-3">
@@ -114,25 +119,20 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 1. Gráfico Superior a todo ancho */}
-      <div className="w-full">
-        <VelocityChart />
-      </div>
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="min-w-0 space-y-6">
+          <ActivityHeatmap tasks={tasks} focusSessions={focusSessions} />
+          <StreakBadge />
+          <NpsPrompt />
+          <KanbanBoard />
+        </div>
 
-      <StreakBadge />
-      <NpsPrompt />
-
-      {/* 2. Tablero Kanban a todo ancho justo debajo de los datos */}
-      <div className="w-full mt-4">
-        <KanbanBoard />
-      </div>
-
-      {/* 3. Línea de tiempo (Agenda) a todo ancho en la parte inferior */}
-      <div className="w-full mt-8">
-        <DailyAgenda
-          tasks={individualAgendaTasks.length > 0 ? individualAgendaTasks : undefined}
-          groupTasks={groupAgendaTasks.length > 0 ? groupAgendaTasks : undefined}
-        />
+        <div className="lg:sticky lg:top-6">
+          <DailyAgenda
+            tasks={individualAgendaTasks.length > 0 ? individualAgendaTasks : undefined}
+            groupTasks={groupAgendaTasks.length > 0 ? groupAgendaTasks : undefined}
+          />
+        </div>
       </div>
 
       <div className="pt-8 opacity-80 max-w-2xl">

@@ -4,6 +4,7 @@ import { useZenStore } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { BarChart3, CheckCircle2, Clock, AlertTriangle, Flame } from "lucide-react";
+import { VelocityChart } from "./velocity-chart";
 
 const CHART_COLORS = ["#34c790", "#7c5cfc", "#e85454"];
 
@@ -30,6 +31,8 @@ export default function AnalyticsPage() {
         <StatCard icon={<AlertTriangle className="w-4 h-4 text-danger" />} label="Vencidas" value={overdue} color="text-danger" />
         <StatCard icon={<Flame className="w-4 h-4 text-warning" />} label="Racha" value={`${streak.currentStreak}d`} color="text-warning" />
       </div>
+
+      <VelocityChart />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card hover={false}>

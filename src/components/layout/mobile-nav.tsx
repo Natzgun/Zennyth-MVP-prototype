@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Plus, Timer, Users } from "lucide-react";
+import { CalendarDays, LayoutDashboard, Plus, Timer, Users } from "lucide-react";
 
 const navItems = [
-  { href: "/", icon: LayoutDashboard, label: "Mañana" },
+  { href: "/", icon: LayoutDashboard, label: "Inicio" },
   { href: "/tasks/new", icon: Plus, label: "Nueva", isMain: true },
   { href: "/workspaces", icon: Users, label: "Grupos" },
+  { href: "/timeline", icon: CalendarDays, label: "Calendario" },
   { href: "/focus", icon: Timer, label: "Focus" },
 ];
 

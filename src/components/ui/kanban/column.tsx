@@ -15,6 +15,7 @@ interface KanbanColumnProps {
   emptyState?: ReactNode;
   status?: string;
   isDropReady?: boolean;
+  scrollable?: boolean;
 }
 
 export function KanbanColumn({
@@ -31,12 +32,14 @@ export function KanbanColumn({
   emptyState,
   status,
   isDropReady,
+  scrollable = false,
 }: KanbanColumnProps) {
   return (
     <div
       data-column-status={status}
       className={cn(
-        "flex flex-col rounded-xl p-4 min-h-[400px] border transition-colors",
+        "flex flex-col rounded-xl p-4 border transition-colors",
+        scrollable ? "h-[500px]" : "min-h-[400px]",
         bgClass ?? "bg-bg-subtle/30 border-border/50 hover:bg-bg-subtle/50",
         isDropReady && "ring-2 ring-primary/40 bg-primary/5",
         className
@@ -66,7 +69,7 @@ export function KanbanColumn({
 
       {count === 0 && emptyState}
 
-      <div className="flex flex-col gap-3 flex-1">{children}</div>
+      <div className={cn("flex flex-col gap-3 flex-1", scrollable && "scrollbar-zennyth overflow-y-auto pr-2")}>{children}</div>
     </div>
   );
 }
